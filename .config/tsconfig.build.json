@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "..",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "stripInternal": true,
+    "rootDir": "../src/lib",
+    "types": [
+      "node",
+      "obsidian"
+    ]
+  },
+  "include": [ "../src/lib/index.ts"],
+  "exclude": [ "../src/test/**" ]
+}
