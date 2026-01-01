@@ -20,6 +20,7 @@
     "build:types": "tsc -p .config/tsconfig.build.json",
     "build": "npm run build:js && npm run build:types",
     "coverage": "vitest run --coverage --config .config/vitest.config.ts",
+    "package": "npm run build && npm pack",
     "test": "vitest --config .config/vitest.config.ts",
     "test:watch": "vitest --watch --config .config/vitest.config.ts",
     "test:ui": "vitest --ui --config .config/vitest.config.ts"
