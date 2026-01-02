@@ -1,4 +1,7 @@
-describe("Running 03.01.log.notice.test.ts", () => {
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("notice() with undefined level logs info and shows info notice", async () => {
     vi.resetModules();
@@ -11,7 +14,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -38,7 +41,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -67,7 +70,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -94,7 +97,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -123,7 +126,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -149,7 +152,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 
@@ -175,7 +178,7 @@ describe("Running 03.01.log.notice.test.ts", () => {
       }),
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log    } = await import("../lib/log");
     const { Notice } = await import("obsidian");
     (Notice as any).mockClear();
 

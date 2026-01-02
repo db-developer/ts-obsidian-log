@@ -11,8 +11,9 @@ vi.mock("obsidian", () => {
 });
 
 // imports
-import Log from "../lib/log";
-import { isEnabled, isLogLevel } from "../lib/log";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { Log } from "../lib/log";
 
 /**
  * Purpose of this test suite:
@@ -23,7 +24,7 @@ import { isEnabled, isLogLevel } from "../lib/log";
  * - The exported functions are present
  * - No logic tests; import and existence checks only
  */
-describe("Running 01.00.log.import.test.ts", () => {
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("module can be imported without throwing", () => {
     expect(Log).toBeDefined();
@@ -46,13 +47,5 @@ describe("Running 01.00.log.import.test.ts", () => {
     expect(typeof proto.warn).toBe("function");
     expect(typeof proto.error).toBe("function");
     expect(typeof proto.notice).toBe("function");
-  });
-
-  test("export 'isEnabled' exists and is a function", () => {
-    expect(typeof isEnabled).toBe("function");
-  });
-
-  test("export 'isLogLevel' exists and is a function", () => {
-    expect(typeof isLogLevel).toBe("function");
   });
 });

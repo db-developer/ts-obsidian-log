@@ -16,9 +16,7 @@
     }
   },
   "scripts": {
-    "build:js": "rollup --config .config/rollup.config.mjs --environment BUILD:production",
-    "build:types": "tsc -p .config/tsconfig.build.json",
-    "build": "npm run build:js && npm run build:types",
+    "build": "rollup --config .config/rollup.config.mjs --environment BUILD:production",
     "coverage": "vitest run --coverage --config .config/vitest.config.ts",
     "package": "npm run build && npm pack",
     "test": "vitest --config .config/vitest.config.ts",
@@ -33,6 +31,14 @@
     "README.md",
     "ROADMAP.md"
   ],
+  "peerDependencies": {
+    "obsidian": ">=1.5.0"
+  },
+  "peerDependenciesMeta": {
+    "obsidian": {
+      "optional": false
+    }
+  },  
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-node-resolve": "^16.0.3",

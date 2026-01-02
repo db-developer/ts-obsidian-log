@@ -1,8 +1,10 @@
 // imports LogLevel & LogSettings are (compiletime-) types and 
 // cannot be tested at runtime.
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { Log } from "../lib";
 
-describe("Running 99.00.index.test.ts", () => {
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("export 'Log' is a class (function)", () => {
     expect(Log).toBeDefined();

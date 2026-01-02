@@ -1,214 +1,17 @@
-import { Notice } from "obsidian";
-
-/**
- * An array of all valid log levels used by the logger.
- *
- * This array serves as the single source of truth for:
- * - Type definition of {@link LogLevel}
- * - Runtime validation of log level values
- * - Determining the order and verbosity of logs
- *
- * The order of elements defines their relative verbosity:
- * "none" < "error" < "warn" < "debug" < "log" < "info".
- *
- * @example
- * if (LOG_LEVELS.includes(someValue as LogLevel)) {
- *   // someValue is a valid log level
- * }
- */
-const LOG_LEVELS = [ "none", "error", "warn", "debug", "log", "info" ] as const;
-
-/**
- * Represents all valid log levels for the logger.
- *
- * This type is derived from {@link LOG_LEVELS} and ensures that
- * only one of the predefined strings can be used as a log level.
- *
- * Valid values are:
- * - "none"  – disables all logging
- * - "error" – only logs errors
- * - "warn"  – logs warnings and errors
- * - "debug" – logs debug messages, warnings, and errors
- * - "log"   – logs general messages, debug, warnings, and errors
- * - "info"  – logs informational messages, general logs, debug, warnings, and errors
- *
- * Using this type enforces compile-time safety when specifying a log level.
- *
- * @example
- * let level: LogLevel = "debug"; // ✅ valid
- * let invalidLevel: LogLevel = "verbose"; // ❌ TypeScript error
- */
-export type LogLevel = typeof LOG_LEVELS[number];
-
-/**
- * Log levels excluding "none".
- * 
- * Used internally for methods that must always return a meaningful
- * log level suitable for logging or notice display.
- */
-type ExclusiveLogLevel = Exclude<LogLevel, "none">;
-
-/**
- * A convenience lookup object for all supported log levels.
- *
- * This object maps each log level string to itself, allowing
- * type-safe references throughout the codebase without
- * repeating string literals.
- *
- * Example usage:
- * ```ts
- * if (level === LogLevels.error) {
- *   this.logger(LogLevels.error, message);
- * }
- * ```
- *
- * Benefits:
- * - Eliminates repeated string literals like "error", "warn", "info"
- * - Ensures TypeScript type-safety for all log level comparisons
- * - Works seamlessly with {@link LogLevel} type
- */
-const LogLevels = Object.fromEntries(LOG_LEVELS.map(l => [l, l])) as Record<LogLevel, LogLevel>;
-
-/**
- * Defines the allowed values for the `level` parameter of the {@link Log.notice} method.
- *
- * This type controls both the logging behavior and the visual appearance
- * of the Notice popup in Obsidian.
- *
- * - `Error` or `"error"` → logged as error level, Notice styled as error (red)
- * - `"warn"` → logged as warn level, Notice styled as warning (yellow)
- * - `"debug"` or `"success"` → logged as debug level, Notice on "success" styled as success (green)
- * - `"info"` or `undefined` → logged as info level, Notice styled as info (blue)
- *
- * @remarks
- * Exporting this type ensures that TypeScript can enforce correct
- * values when calling `Log.notice` from other modules.
- * 
- * @internal Test-only export
- */
-export type NoticeLevel = Error | LogLevel | "success" | undefined;
-
-/**
- * Maps each {@link LogLevel} to a numeric value representing its verbosity.
- *
- * Lower numbers correspond to less verbose levels, and higher numbers
- * correspond to more verbose levels. This mapping is used for runtime
- * comparisons to determine whether a given message should be logged
- * based on the current logger setting.
- *
- * The numeric values are assigned automatically based on the order
- * of {@link LOG_LEVELS}, with increments of 10:
- * - "none"  = 0
- * - "error" = 10
- * - "warn"  = 20
- * - "debug" = 30
- * - "log"   = 40
- * - "info"  = 50
- *
- * Using numeric values allows efficient and simple comparisons:
- * ```
- * if (LOG_LEVEL_ORDER[msgLevel] <= LOG_LEVEL_ORDER[currentLevel]) {
- *   // log the message
- * }
- * ```
- */
-const LOG_LEVEL_ORDER: Record<LogLevel, number> = LOG_LEVELS.reduce(
-  (acc, level, index) => {
-    acc[level] = index * 10; // none=0, error=10, warn=20, ...
-    return acc;
-  },
-  {} as Record<LogLevel, number>
-);
-
-/**
- * Determines whether a message with a given log level should be logged
- * based on the currently configured logger level.
- *
- * A message is considered enabled if its level is less than or equal
- * to the configured level in terms of verbosity.
- *
- * @param msglvl
- *   The log level of the message being considered.
- * @param setlvl
- *   The currently configured log level of the logger.
- * @returns
- *   `true` if the message should be logged, `false` otherwise.
- *
- * @example
- * isEnabled("debug", "info"); // true
- * isEnabled("info", "log");   // false
- * 
- * @internal Test-only export
- */
-export function isEnabled( msglvl: LogLevel, setlvl: LogLevel): boolean {
-  return LOG_LEVEL_ORDER[msglvl] <= LOG_LEVEL_ORDER[setlvl];
-}
-
-/**
- * Runtime type guard to check whether a value is a valid {@link LogLevel}.
- *
- * This function is useful for validating user-provided or persisted
- * settings at runtime, ensuring that only recognized log levels are used.
- *
- * @param value
- *   The value to check.
- * @returns
- *   `true` if the value is one of the predefined log levels, `false` otherwise.
- *
- * @example
- * isLogLevel("debug"); // true
- * isLogLevel("verbose"); // false
- * 
- * @internal Test-only export
- */
-export function isLogLevel(value: unknown): value is LogLevel {
-  return typeof value === "string" && LOG_LEVELS.includes(value as LogLevel);
-}
-
-/**
- * Maps a given `NoticeLevel` to the corresponding `ExclusiveLogLevel` used for logging.
- *
- * @param level - The input notice level, which can be an Error, a LogLevel, "success", or undefined.
- * @returns The `ExclusiveLogLevel` that determines the log severity for the message.
- *
- * - Errors and "error" → "error"
- * - "warn" → "warn"
- * - "success" or "debug" → "debug"
- * - "log" → "log"
- * - undefined or "info" → "info"
- * 
- * @internal Test-only export
- */
-export function getLogLevel(level?: NoticeLevel): ExclusiveLogLevel {
-  if (level instanceof Error || level === LogLevels.error) {
-    return LogLevels.error as ExclusiveLogLevel;
-  } else if (level === LogLevels.warn) {
-    return LogLevels.warn as ExclusiveLogLevel;
-  } else if (level === "success" || level === LogLevels.debug) {
-    // Treat debug/success as debug-level logging
-    return LogLevels.debug as ExclusiveLogLevel;
-  } else if (level === LogLevels.log) {
-    return LogLevels.log as ExclusiveLogLevel;
-  } 
-  else return LogLevels.info as ExclusiveLogLevel // undefined or info
-}
-
-/**
- * Configuration interface for the logger.
- *
- * Contains the settings that control the behavior of the logger,
- * currently only the log level.
- *
- * @property loglevel
- *   Specifies the verbosity of the logger. Must be a valid {@link LogLevel}.
- *   Messages with a level less than or equal to this value will be output.
- *
- * @example
- * const settings: LogSettings = { loglevel: "info" };
- */
-export interface LogSettings {
-  loglevel: LogLevel
-}
+import { Notice             } from "obsidian";
+import { DEBUG, 
+         ERROR, 
+         INFO,
+         LOG,
+         SUCCESS,
+         WARN,
+         ExclusiveLogLevel,
+         LogLevel,
+         LogSettings,
+         NoticeLevel        } from "./types"
+import { isEnabled,
+         isLogLevel,
+         getLogLevel        } from "./log.internal"
 
 /**
  * Maps each enabled {@link LogLevel} (excluding "none") to the corresponding
@@ -256,13 +59,18 @@ const CONSOLE_FN: Record<ExclusiveLogLevel, (...args: unknown[]) => void> = {
  * logger.error(new Error("Something went wrong"));
  * ```
  */
-export default class Log {
+export class Log {
   /**
    * Creates and initializes a new {@link Log} instance.
    *
    * This static method validates the provided {@link LogSettings.loglevel}
    * at runtime. If the provided log level is invalid or missing, it is
    * automatically set to the default level `"info"`.
+   * 
+   * NOTE:
+   * The provided `settings` object is a vehicle for the desired
+   * type of logging. While settings cannot be "re-set", the internal
+   * value of loglevel may be changed by Obsidian/Plugin settings
    *
    * @param pluginname
    *   A short identifier for the plugin or module using the logger.
@@ -278,7 +86,7 @@ export default class Log {
    */
   public static init(pluginname: string, settings: LogSettings) {
     if (!isLogLevel(settings.loglevel)) {
-      settings.loglevel = LogLevels.info;
+      settings.loglevel = INFO;
     }
     return new Log(pluginname, settings);
   }
@@ -288,6 +96,12 @@ export default class Log {
    *
    * Instances should be created via {@link Log.init} to ensure proper
    * runtime validation of settings.
+   * 
+   * NOTE:
+   * The provided `settings` object is a vehicle for the desired
+   * type of logging. While settings cannot be "re-set", the internal
+   * value of loglevel may be changed by Obsidian/Plugin settings
+   * DO NOT clone or freeze settings! Use them as provided.
    *
    * @param pluginname
    *   The name of the plugin or module, used as a prefix for all log messages.
@@ -345,12 +159,13 @@ export default class Log {
 
     const cssClass = (() => {
       switch (level) {
-        case LogLevels.error: return "notice-error";
-        case LogLevels.warn:  return "notice-warn";
-        case LogLevels.info:  return "notice-info";
-        case "success":       return "notice-success";
-        case LogLevels.log:   return ""; // neutral / default
-        default: return "";
+        case ERROR:   return "notice-error";
+        case WARN:    return "notice-warn";
+        case INFO:    return "notice-info";
+        case SUCCESS: return "notice-success";
+        case LOG:     return ""; // neutral / default
+        /* c8 ignore next -- defensive default, unreachable via public notice() API */
+        default:      return "";
       }
     })();
     // was: noticeEl (deprecated since 0.9.7) => messageEl
@@ -371,7 +186,7 @@ export default class Log {
    * logger.debug("Current state:", stateObject);
    */
   public debug(...data: unknown[]) {
-    this.logger(LogLevels.debug as ExclusiveLogLevel, ...data);
+    this.logger(DEBUG, ...data);
   }
 
   /**
@@ -388,7 +203,7 @@ export default class Log {
    * logger.log("Plugin loaded successfully");
    */
   public log(...data: unknown[]) {
-    this.logger(LogLevels.log as ExclusiveLogLevel, ...data);
+    this.logger(LOG, ...data);
   }
 
   /**
@@ -404,7 +219,7 @@ export default class Log {
    * logger.info("Initialization complete");
    */
   public info(...data: unknown[]) {
-    this.logger(LogLevels.info as ExclusiveLogLevel, ...data);
+    this.logger(INFO, ...data);
   }
   
   /**
@@ -421,7 +236,7 @@ export default class Log {
    * logger.warn("Configuration value is deprecated:", deprecatedValue);
    */
   public warn(...data: unknown[]) {
-    this.logger(LogLevels.warn as ExclusiveLogLevel, ...data);
+    this.logger(WARN, ...data);
   }
 
   /**
@@ -444,36 +259,48 @@ export default class Log {
    * }
    */
   public error( error: Error, ...data: unknown[] ) {
-    this.logger(LogLevels.error as ExclusiveLogLevel, ...data, error);
-    console.log
+    this.logger(ERROR, ...data, error);
   }
 
   /**
-   * Displays a notice and optionally logs it according to the specified level.
+   * Displays a notice in Obsidian and optionally logs it to the console.
    *
-   * This method performs two main actions:
-   * 1. Logs the message via the internal logger. The log will only be printed
-   *    if the current settings allow the specified log level.
-   * 2. Shows a visual notice to the user. The notice behavior depends on the level:
-   *    - Error objects are always logged and displayed as error notices.
-   *    - "success" messages are displayed as success notices.
-   *    - "debug" messages are logged but do not trigger a notice.
-   *    - "log" messages are displayed as standard log notices.
-   *    - undefined or "info" messages are displayed as informational notices.
+   * This method performs two actions:
+   * 1. Logs the message via the internal logger, respecting the current
+   *    `LogSettings.loglevel`. The severity is determined using {@link getLogLevel}.
+   * 2. Shows a visual Notice popup depending on the specified level.
    *
-   * @param {string} message - The message to log and/or display.
-   * @param {NoticeLevel | Error} [level] - Optional log/notice level or an Error object.
-   *                                         Determines how the message is logged and displayed.
+   * The mapping of `NoticeLevel` to behavior is:
+   * - `Error` objects → logged as `"error"`, displayed as an error Notice (red)
+   * - `"error"` → logged as `"error"`, displayed as an error Notice (red)
+   * - `"warn"` → logged as `"warn"`, displayed as a warning Notice (yellow)
+   * - `"success"` → logged as `"debug"`, displayed as a success Notice (green)
+   * - `"debug"` → logged as `"debug"`, no Notice popup
+   * - `"log"` → logged as `"log"`, displayed as a standard Notice
+   * - `"info"` or `undefined` → logged as `"info"`, displayed as an info Notice (blue)
+   *
+   * @param message - The message to log and/or display in a Notice.
+   * @param level - Optional level determining the log severity and Notice styling.
+   *                Can be any {@link NoticeLevel} or an `Error` object.
    *
    * @example
-   * // Log a notice
+   * // Log an informational notice
    * logger.notice("Plugin initialized successfully");
    *
-   * // Log an error notice
+   * // Log a warning notice
+   * logger.notice("Configuration value is deprecated", "warn");
+   *
+   * // Log an error with popup
    * logger.notice("Failed to load configuration", new Error("Missing file"));
-   * logger.notice("Failed to load configuration", "error");
+   *
+   * @remarks
+   * - `NoticeLevel "debug"` will never trigger a Notice popup, allowing
+   *   debug information to be logged silently.
+   * - `NoticeLevel "success"` triggers a Notice and logs to console.debug.
+   *
+   * @internal
    */
-  public notice(message: string, level?: NoticeLevel) {
+  public notice(message: string, level?: NoticeLevel | Error) {
     // 1. check for loglevel
     const logLevel = getLogLevel(level);
 
@@ -484,21 +311,18 @@ export default class Log {
       this.logger(logLevel, message);
     }
 
-    // 2. Show Notice (always pops up)
+    // 2. Show Notice
     if (level instanceof Error) {
-      this.note(`${message}\r\n${level.toString()}`, LogLevels.error as ExclusiveLogLevel);
-    } else if (level === LogLevels.warn) {
-      this.note(message, LogLevels.warn as ExclusiveLogLevel);
-    } else if (level === "success") {
-      this.note(message, "success");
-    } else if (level === LogLevels.debug) {
+      this.note(`${message}\r\n${level.toString()}`, ERROR);
+    } else if ((level === ERROR)   || (level === WARN) || 
+               (level === SUCCESS) || (level === LOG))  {
+      this.note(message, level);
+    } else if (level === DEBUG) {
       // debug does not trigger a notice
       return;
-    } else if (level === LogLevels.log) {
-      this.note(message, LogLevels.log as ExclusiveLogLevel);
     } else {
       // undefined or info
-      this.note(message, LogLevels.info as ExclusiveLogLevel);
+      this.note(message, INFO);
     }
   }  
 }

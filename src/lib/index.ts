@@ -1,2 +1,2 @@
-export type { LogLevel, LogSettings } from "./log";
-export { default as Log } from "./log";
+export type { LogLevel, LogSettings } from "./types";
+export { Log } from "./log";

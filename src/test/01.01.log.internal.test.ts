@@ -11,9 +11,11 @@ vi.mock("obsidian", () => {
 });
 
 // imports
-import { isEnabled, isLogLevel, getLogLevel } from "../lib/log";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { isEnabled, isLogLevel, getLogLevel } from "../lib/log.internal";
 
-describe("Running 01.01.log.helpers.test.ts", () => {
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("isEnabled is exported and callable", () => {
     expect(typeof isEnabled).toBe("function");
@@ -43,8 +45,8 @@ describe("Running 01.01.log.helpers.test.ts", () => {
       expect(isEnabled("info", "error")).toBe(false);
     });
 
-    test("none only allows none", () => {
-      expect(isEnabled("none", "none")).toBe(true);
+    test("none must allow nothing", () => {
+      expect(isEnabled("none", "none")).toBe(false);
       expect(isEnabled("error", "none")).toBe(false);
     });
 

@@ -1,4 +1,7 @@
-describe("Running 02.01.log.public-methods.test.ts", () => {
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("debug() logs via console.debug when loglevel allows it", async () => {
     vi.resetModules();
@@ -12,7 +15,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "debug" });
     log.debug("dbg");
@@ -34,7 +37,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "info" });
     log.debug("dbg");
@@ -56,7 +59,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "warn" });
     log.debug("dbg");
@@ -78,7 +81,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "info" });
     log.info("hello");
@@ -100,7 +103,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "warn" });
     log.warn("warn");
@@ -122,7 +125,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("plugin", { loglevel: "log" });
     log.log("plain");
@@ -144,7 +147,7 @@ describe("Running 02.01.log.public-methods.test.ts", () => {
       },
     }));
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const err = new Error("boom");
     const log = Log.init("plugin", { loglevel: "error" });

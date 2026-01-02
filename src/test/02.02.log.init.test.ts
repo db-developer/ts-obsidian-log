@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
 /**
  * Purpose of this test suite:
  * - Instantiation exclusively via `Log.init()`
@@ -5,7 +8,7 @@
  * - Fallback behavior for invalid log levels
  * - No tests beyond observable side effects (no logger logic)
  */
-describe("Running 01.02.log.init.test.ts", () => {
+describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
   test("Log.init returns an instance of Log", async () => {
     vi.mock("obsidian", () => {
@@ -16,7 +19,7 @@ describe("Running 01.02.log.init.test.ts", () => {
         },
       };
     });
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("test-plugin", { loglevel: "info" });
     expect(log).toBeInstanceOf(Log);
@@ -36,7 +39,7 @@ describe("Running 01.02.log.init.test.ts", () => {
       };
     });
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("my-plugin", { loglevel: "info" });
     log.info("hello");
@@ -60,7 +63,7 @@ describe("Running 01.02.log.init.test.ts", () => {
       };
     });
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     const log = Log.init("test", { loglevel: "debug" });
     log.debug("debug-message");
@@ -85,7 +88,7 @@ describe("Running 01.02.log.init.test.ts", () => {
       };
     });
 
-    const { default: Log } = await import("../lib/log");
+    const { Log } = await import("../lib/log");
 
     // bewusst falscher Wert
     const log = Log.init("fallback-test", { loglevel: "INVALID" as any });
