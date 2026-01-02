@@ -11,9 +11,15 @@ vi.mock("obsidian", () => {
 });
 
 // imports
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-import { isEnabled, isLogLevel, getLogLevel } from "../lib/log.internal";
+import { fileURLToPath      } from "node:url";
+import   path                 from "node:path";
+import { DEBUG              } from "../lib/types";
+import { isEnabled, 
+         isLogLevel, 
+         getLogLevel, 
+         resolvePluginName,
+         resolveSettings,
+         showDebugWarning   } from "../lib/log.internal";
 
 describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").split("/test/")[1] || fileURLToPath(import.meta.url))}`, () => {
 
@@ -27,6 +33,10 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
 
   test("getLogLevel is exported and callable", () => {
     expect(typeof getLogLevel).toBe("function");
+  });
+
+  test("resolvePluginName is exported and callable", () => {
+    expect(typeof resolvePluginName).toBe("function");
   });
 
   describe("isEnabled()", () => {
@@ -120,6 +130,103 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
     test("returns 'info' for empty string input", () => {
       expect(getLogLevel("")).toBe("info");
     });
+  });
 
+  describe("resolvePluginName()", () => {
+    test("returns explicit plugin name if provided", () => {
+      // selbst wenn __PLUGIN_NAME__ existiert, muss das Argument gewinnen
+      (globalThis as any).__PLUGIN_NAME__ = "injected-plugin";
+
+      const result = resolvePluginName("explicit-plugin");
+
+      expect(result).toBe("explicit-plugin");
+    });
+
+    test("falls back to __PLUGIN_NAME__ if no argument is provided", () => {
+      (globalThis as any).__PLUGIN_NAME__ = "injected-plugin";
+
+      const result = resolvePluginName();
+
+      expect(result).toBe("injected-plugin");
+    });
+
+    test("falls back to 'unknown-plugin' if neither argument nor __PLUGIN_NAME__ exist", () => {
+      delete (globalThis as any).__PLUGIN_NAME__;
+
+      const result = resolvePluginName();
+
+      expect(result).toBe("unknown-plugin");
+    });
+  });
+
+  describe("resolvePluginName()", () => {
+    test("creates default settings if none are provided", () => {
+      const settings = resolveSettings();
+
+      expect(settings).toEqual({ loglevel: "info" });
+    });
+
+    test("returns provided settings unchanged if loglevel is valid", () => {
+      const input: LogSettings = { loglevel: "debug" };
+
+      const result = resolveSettings(input);
+
+      expect(result).toBe(input);                // gleiche Referenz
+      expect(result.loglevel).toBe("debug");     // unverändert
+    });
+
+    test("mutates provided settings if loglevel is invalid", () => {
+      const input = { loglevel: "INVALID" as any };
+
+      const result = resolveSettings(input);
+
+      expect(result).toBe(input);                // Mutation, kein neues Objekt
+      expect(result.loglevel).toBe("info");      // Fallback greift
+    });
+
+    test("does not create a new object when mutating invalid settings", () => {
+      const input = { loglevel: "INVALID" as any };
+
+      const result = resolveSettings(input);
+
+      expect(result).toBe(input);
+    });
+  });
+
+  describe("showDebugWarning()", () => {
+
+    test("does not show warning if already shown", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const result = showDebugWarning(false, DEBUG, "MyPlugin");
+
+      expect(result).toBe(false);
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+
+    test("does not show warning for non-debug levels", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const result = showDebugWarning(true, "info", "MyPlugin");
+
+      expect(result).toBe(true);
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+
+    test("shows warning for first debug message", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const result = showDebugWarning(true, DEBUG, "MyPlugin");
+
+      expect(result).toBe(false);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith("MyPlugin", expect.stringContaining("Debug output may not be visible"));
+
+      warnSpy.mockRestore();
+    });
   });
 });

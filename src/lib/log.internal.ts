@@ -8,7 +8,71 @@ import { DEBUG,
          ExclusiveLogLevel,
          LogLevel,
          LogLevels,
+         LogSettings,
          NoticeLevel        } from "./types"
+
+/**
+ * Build-time injected plugin identifier.
+ *
+ * This constant is expected to be **statically replaced at bundle time**
+ * by the build tool (e.g. Rollup) and is **not** resolved at runtime.
+ *
+ * Typical Rollup configuration:
+ *
+ * ```ts
+ * import replace from "@rollup/plugin-replace";
+ *
+ * replace({
+ *   preventAssignment: true,
+ *   values: {
+ *     __PLUGIN_NAME__: JSON.stringify("my-plugin"),
+ *   },
+ * })
+ * ```
+ *
+ * Notes:
+ * - This value is optional and may be `undefined` if not injected.
+ * - No runtime file system access or dynamic imports are involved.
+ * - This approach is safe for Obsidian plugins and ESM/CJS bundles.
+ *
+ * @internal Build-time constant
+ */
+declare const __PLUGIN_NAME__: string | undefined;
+
+/**
+ * Resolves the effective plugin name used for logging and diagnostics.
+ *
+ * Resolution order:
+ * 1. Explicitly provided `name` argument
+ * 2. Build-time injected {@link __PLUGIN_NAME__}
+ * 3. Fallback literal `"unknown-plugin"`
+ *
+ * This function is intentionally **pure and synchronous**:
+ * - no file system access
+ * - no dynamic imports
+ * - no dependency on Node.js APIs
+ *
+ * This makes it safe to use in:
+ * - Obsidian plugin runtime
+ * - unit tests
+ * - bundled ESM or CJS output
+ *
+ * @param name
+ *   Optional explicit plugin name.
+ *   When provided, it always takes precedence.
+ *
+ * @returns
+ *   The resolved plugin name.
+ */
+export function resolvePluginName(pluginname?: string): string {
+  if (pluginname) return pluginname;
+
+  if (typeof __PLUGIN_NAME__ !== "undefined") {
+    return __PLUGIN_NAME__;
+  }
+
+  return "unknown-plugin";
+}
 
 /**
  * A `Set` containing all valid log level strings defined in {@link LogLevels}.
@@ -152,4 +216,79 @@ export function getLogLevel(level?: NoticeLevel | Error): ExclusiveLogLevel {
     return level;
   } 
   else return INFO // undefined or info will return info
+}
+
+/**
+ * Resolves and normalizes logger settings.
+ *
+ * Behavior:
+ * - If no settings are provided, a new settings object with default values
+ *   is created.
+ * - If settings are provided but contain an invalid loglevel, the loglevel
+ *   is mutated to the default value.
+ *
+ * Note:
+ * The settings object is intentionally mutable. This allows external
+ * configuration (e.g. Obsidian plugin settings) to change the effective
+ * log level at runtime.
+ *
+ * @param settings
+ *   Optional logger settings provided by the caller.
+ * @returns
+ *   A guaranteed valid {@link LogSettings} object.
+ */
+export function resolveSettings(settings?: LogSettings): LogSettings {
+  if (!settings) {
+    return { loglevel: INFO };
+  }
+
+  if (!isLogLevel(settings.loglevel)) {
+    settings.loglevel = INFO;
+  }
+
+  return settings;
+}
+
+/**
+ * Warning message displayed the first time a debug-level log is invoked.
+ *
+ * Browsers like Chrome only show `console.debug` output if DevTools
+ * are set to "Verbose" or an equivalent detailed level.
+ *
+ * This constant is used by `showDebugWarnung()` to notify developers
+ * that debug output may not be visible by default.
+ */
+const DEBUGWARNING = "Debug output may not be visible unless Chrome DevTools are set to 'Verbose'." as const;
+
+/**
+ * Conditionally displays a one-time debug warning to the console.
+ *
+ * This function is intended to alert the developer that debug messages
+ * may not appear unless the browser's DevTools are set to a verbose level.
+ * It only triggers for the first debug-level message.
+ *
+ * @param show
+ *   Boolean flag indicating whether the debug warning has already been shown.
+ *   If `false`, the warning is displayed; otherwise, no output occurs.
+ * @param msglvl
+ *   The log level of the current message. The warning is only shown
+ *   when this equals {@link DEBUG}.
+ * @param pluginname
+ *   The name of the plugin or module, used as a prefix in the console warning.
+ *
+ * @returns
+ *   Returns `false` if the warning was shown (indicating it should no longer
+ *   be shown), otherwise returns the original `show` value.
+ *
+ * @example
+ * let debugWarningShown = true;
+ * debugWarningShown = showDebugWarnung(debugWarningShown, DEBUG, "MyPlugin");
+ */
+export function showDebugWarning(show: boolean, msglvl: LogLevel, pluginname: string): boolean {
+  if (!show) return show;
+  if (msglvl !== DEBUG) return show;
+
+  console.warn(pluginname, DEBUGWARNING);
+  
+  return false;
 }

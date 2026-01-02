@@ -10,8 +10,10 @@ import { DEBUG,
          LogSettings,
          NoticeLevel        } from "./types"
 import { isEnabled,
-         isLogLevel,
-         getLogLevel        } from "./log.internal"
+         getLogLevel,
+         resolvePluginName,
+         resolveSettings,
+         showDebugWarning   } from "./log.internal"
 
 /**
  * Maps each enabled {@link LogLevel} (excluding "none") to the corresponding
@@ -61,34 +63,66 @@ const CONSOLE_FN: Record<ExclusiveLogLevel, (...args: unknown[]) => void> = {
  */
 export class Log {
   /**
-   * Creates and initializes a new {@link Log} instance.
+   * Holds the single instance of the {@link Log} class.
    *
-   * This static method validates the provided {@link LogSettings.loglevel}
-   * at runtime. If the provided log level is invalid or missing, it is
-   * automatically set to the default level `"info"`.
-   * 
+   * This implements the singleton pattern: only the first call to {@link Log.init}
+   * creates the instance. Subsequent calls return this same object.
+   *
+   * ⚠️ Important:
+   * - The `pluginname` and initial `settings` are set **only once**.
+   * - Mutations to `settings` during runtime (e.g., via Obsidian plugin settings)
+   *   are still reflected in the singleton instance.
+   * - This field is private and should **never be accessed directly**.
+   */
+  private static singleton: Log;
+
+  /**
+   * Tracks whether the initial debug warning has been displayed.
+   *
+   * This flag ensures that the warning about Chrome DevTools verbosity
+   * is logged only once, before the first debug-level message is emitted.
+   *
+   * @internal
+   */
+  private static debugWarningShown = false;
+  
+  /**
+   * Creates or returns the singleton {@link Log} instance.
+   *
+   * This method implements the singleton pattern:
+   * - The **first call** to `init()` creates a new `Log` instance using
+   *   the provided `pluginname` and `settings`.
+   * - **Subsequent calls** return the existing instance; new values for
+   *   `pluginname` or `settings` are ignored, though the internal
+   *   `loglevel` of the `settings` object may still change at runtime.
+   *
    * NOTE:
-   * The provided `settings` object is a vehicle for the desired
-   * type of logging. While settings cannot be "re-set", the internal
-   * value of loglevel may be changed by Obsidian/Plugin settings
+   * - The `settings` object serves as a vehicle for the desired initial
+   *   log level. While `settings` cannot be replaced after initialization,
+   *   its `loglevel` property may be mutated during runtime via Obsidian
+   *   plugin settings.
+   * - The `pluginname` is only applied once and prefixed to all log messages.
    *
    * @param pluginname
    *   A short identifier for the plugin or module using the logger.
-   *   This string is prefixed to all log messages for context.
+   *   Only the first value provided is applied.
    * @param settings
-   *   The configuration object controlling the logger behavior.
-   *   Only the `loglevel` property is currently used.
+   *   Optional configuration object controlling the logger behavior.
+   *   If omitted or invalid, defaults to `{ loglevel: "info" }`.
    * @returns
-   *   A new {@link Log} instance with a guaranteed valid log level.
+   *   The singleton {@link Log} instance. Always returns the same object.
    *
    * @example
-   * const logger = Log.init("MyPlugin", { loglevel: "debug" });
+   * const logger1 = Log.init("MyPlugin", { loglevel: "debug" });
+   * const logger2 = Log.init("OtherPlugin", { loglevel: "error" });
+   * console.assert(logger1 === logger2); // ✅ true
    */
-  public static init(pluginname: string, settings: LogSettings) {
-    if (!isLogLevel(settings.loglevel)) {
-      settings.loglevel = INFO;
+  public static init(pluginname?: string, settings?: LogSettings) {
+    if (! Log.singleton) {
+      Log.singleton = new Log(resolvePluginName(pluginname), 
+                              resolveSettings(settings));
     }
-    return new Log(pluginname, settings);
+    return Log.singleton;
   }
 
   /**
@@ -138,9 +172,14 @@ export class Log {
     msglvl: ExclusiveLogLevel,
     ...args: unknown[]
   ) {
-    if (isEnabled(msglvl, this.settings.loglevel)) {
-      CONSOLE_FN[msglvl](this.pluginname, ...args);
+    if (!isEnabled(msglvl, this.settings.loglevel)) {
+      return;
     }
+
+    // One-time warning before the very first debug output
+    Log.debugWarningShown = showDebugWarning(Log.debugWarningShown, msglvl, this.pluginname);
+
+    CONSOLE_FN[msglvl](this.pluginname, ...args);
   }
 
   /**

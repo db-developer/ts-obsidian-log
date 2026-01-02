@@ -18,6 +18,17 @@ All notable changes to this project will be documented in this file.
 
 - No fixes yet
 
+## [1.0.2] - 2026-01-02
+
+### Added
+
+- __PLUGIN_NAME__ - allows rollup to inject a plugin name at build time.
+- debugwarning for chromes devtools
+
+### Changed
+
+- Log is a singleton now.
+
 ## [1.0.1] - 2026-01-02
 
 ### Fixed

@@ -89,6 +89,20 @@ log.log("Neutral log message");
 
 Output depends on the configured log level.
 
+⚠️ Note for Debug Output:
+
+On the **very first call** to `log.debug()`, you may see a console warning like:
+
+```
+Debug output may not be visible unless Chrome DevTools are set to 'Verbose'.
+```
+
+This message appears only once per session and is intended to alert developers
+that debug messages may not appear in Chrome unless the console's verbosity is
+set appropriately.
+Chrome's console verbosity is outside the control of this module and cannot be
+changed programmatically.
+
 ---
 
 ## Notices
@@ -116,15 +130,15 @@ Behavior:
 
 ## Log Level Resolution
 
-| Input                     | Resolved Log Level |
-|---------------------------|--------------------|
-| `Error`                   | `error`            |
-| `"error"`                 | `error`            |
-| `"warn"`                  | `warn`             |
-| `"success"`               | `debug`            |
-| `"debug"`                 | `debug`            |
-| `"log"`                   | `log`              |
-| `"info"` / `undefined`    | `info`             |
+| Input                  | Resolved Log Level |
+|------------------------|--------------------|
+| Error                  | error              |
+| "error"                | error              |
+| "warn"                 | warn               |
+| "success"              | debug              |
+| "debug"                | debug              |
+| "log"                  | log                |
+| "info" / undefined     | info               |
 
 ---
 
@@ -153,11 +167,34 @@ export default {
 };
 ```
 
-Notes:
+---
 
-- `obsidian` must remain external
-- This module must be bundled
-- The final plugin contains all required code
+## Build-time Injection of __PLUGIN_NAME__
+
+This module supports an optional **build-time injected plugin name**
+via the global constant `__PLUGIN_NAME__`.
+
+When present, this value is used as a fallback plugin identifier
+if no explicit name is provided to `Log.init()`.
+
+### Rollup Configuration
+
+```js
+import replace from "@rollup/plugin-replace";
+
+replace({
+  preventAssignment: true,
+  values: {
+    __PLUGIN_NAME__: JSON.stringify("my-plugin"),
+  },
+});
+```
+
+Resolution order:
+
+1. Explicit argument passed to Log.init(...)
+2. Build-time injected __PLUGIN_NAME__
+3. Fallback literal "unknown-plugin"
 
 ---
 
