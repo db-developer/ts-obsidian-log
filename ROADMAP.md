@@ -34,7 +34,7 @@ The roadmap is intentionally lightweight and pragmatic.
 ## Mid-Term Ideas
 
 ### 3. Extended Configuration
-- Support for temporarily elevating log level (e.g. debug sessions)
+- ✔ ~~Support for temporarily elevating log level (e.g. debug sessions)~~ as of version 1.0.1
 
 ### 4. Notice Customization
 - Optional configuration for notice duration
@@ -45,8 +45,8 @@ The roadmap is intentionally lightweight and pragmatic.
 ## Long-Term Considerations
 
 ### 5. Plugin-Wide Integration
-- Helper for integrating with Obsidian plugin settings UI
-- Standardized settings schema for reuse across plugins
+- ✔ ~~Helper for integrating with Obsidian plugin settings UI~~ as of version 1.0.1
+- ✔ ~~Standardized settings schema for reuse across plugins~~ as of version 1.0.0
 
 ### 6. Advanced Logging
 - Structured logging (key/value metadata)

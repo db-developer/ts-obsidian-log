@@ -18,6 +18,17 @@ All notable changes to this project will be documented in this file.
 
 - No fixes yet
 
+## [1.0.1] - 2026-01-02
+
+### Fixed
+
+- type exports
+
+### Changed
+
+- refactoring of modules
+- code test coverage 100% now
+
 ## [1.0.0] - 2026-01-01
 
 - Initial version
